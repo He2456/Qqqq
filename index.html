@@ -2,39 +2,52 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>مستخرج الأفلام الشامل</title>
+    <title>مستخرج الأفلام الشامل المطور</title>
     <style>
         body { font-family: sans-serif; background: #121212; color: #fff; padding: 20px; text-align: center; }
-        button { background: #E50914; color: white; border: none; padding: 15px 30px; font-size: 18px; cursor: pointer; border-radius: 5px; margin: 20px; }
-        textarea { width: 100%; height: 400px; background: #222; color: #fff; padding: 10px; border-radius: 5px; font-family: monospace; }
+        button { background: #E50914; color: white; border: none; padding: 15px 30px; font-size: 18px; cursor: pointer; border-radius: 5px; margin: 20px; font-weight: bold; }
+        textarea { width: 100%; height: 450px; background: #222; color: #00ff00; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 14px; border: 1px solid #333; }
+        .status { color: #ffcc00; font-size: 16px; margin: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <h2>مستخرج الأفلام الكاملة بصيغة M3U</h2>
-    <p>اضغط على الزر بالأسفل لجلب الـ 500 فيلم كاملة من السيرفر مباشرة لرفعه للوحتك</p>
+    <p>اضغط على الزر بالأسفل لتخطي الحماية وجلب الـ 500 فيلم كاملة دفعة واحدة</p>
     
-    <button onclick="fetchMovies()">جلب كافة الأفلام الآن</button>
+    <button onclick="fetchMovies()">جلب كافة الأفلام الآن 🚀</button>
+    <div id="statusLabel" class="status"></div>
     
     <br>
-    <textarea id="result" placeholder="الرابط الشامل سيظهر هنا..."></textarea>
+    <textarea id="result" placeholder="قائمة الـ M3U الشاملة ستظهر هنا مباشرة..."></textarea>
 
     <script>
     async function fetchMovies() {
         const txt = document.getElementById('result');
-        txt.value = "جاري جلب الأفلام كاملة، انتظر ثواني...";
+        const statusLabel = document.getElementById('statusLabel');
         
-        // الرابط الشامل لبيانات السيرفر
-        const url = "http://185.191.126.127:8080/player_api.php?username=357643467990765&password=Ofgo3yz8CH&action=get_vod_streams";
+        txt.value = "";
+        statusLabel.innerText = "جاري الاتصال بالسيرفر وتخطي الحماية... انتظر ثواني قليلة";
+        
+        // الرابط الشامل والملف المباشر للسيرفر الخاص بك
+        const targetUrl = "http://185.191.126.127:8080/player_api.php?username=357643467990765&password=Ofgo3yz8CH&action=get_vod_streams";
+        
+        // استخدام بروكسب سريع ومفتوح لتخطي حظر الـ CORS في المتصفحات
+        const proxyUrl = "https://corsproxy.io/?" + encodeURIComponent(targetUrl);
         
         try {
-            // نطلب البيانات عبر بروكسب مجاني لتجنب حظر المتصفح CORS
-            const proxyUrl = "https://api.allorigins.win/get?url=" + encodeURIComponent(url);
             const response = await fetch(proxyUrl);
-            const data = await response.json();
-            const movies = JSON.parse(data.contents);
+            if (!response.ok) throw new Error("فشل في جلب البيانات من البروكسي");
+            
+            const movies = await response.json();
+            
+            if (!Array.isArray(movies)) {
+                statusLabel.innerText = "❌ السيرفر لم يرجع مصفوفة بيانات صحيحة.";
+                return;
+            }
             
             let m3u = "#EXTM3U\n\n";
+            let count = 0;
             
             movies.forEach(movie => {
                 const id = movie.stream_id || movie.id;
@@ -43,21 +56,22 @@
                 const ext = movie.container_extension || "mp4";
                 const group = (movie.category_name || "الأفلام").trim();
                 
-                // بناء رابط الفيلم المباشر
+                // بناء روابط البث المباشرة والصحيحة لكل فيلم
                 const streamUrl = `http://185.191.126.127:8080/movie/357643467990765/Ofgo3yz8CH/${id}.${ext}`;
                 
-                if(name && id) {
+                if (name && id) {
                     m3u += `#EXTINF:-1 tvg-id="${id}" tvg-name="${name}" tvg-logo="${logo}" group-title="${group}",${name}\n`;
                     m3u += `${streamUrl}\n\n`;
+                    count++;
                 }
             });
             
             txt.value = m3u;
-            alert("تم جلب كل الأفلام بنجاح! انسخ النص الآن وضعه في لوحتك.");
+            statusLabel.innerText = `✅ نجحت العملية! تم استخراج عدد (${count}) فيلم بنجاح وبدون نقصان.`;
             
         } catch (error) {
-            txt.value = "حدث خطأ أثناء جلب البيانات. تأكد من اتصالك بالإنترنت.";
-            console.error(error);
+            statusLabel.innerText = "❌ حدث خطأ أثناء جلب البيانات. جرب مرة أخرى أو تأكد من عمل السيرفر.";
+            txt.value = "تفاصيل الخطأ الكامنة لقسم الدعم: " + error.message;
         }
     }
     </script>
